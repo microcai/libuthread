@@ -1,0 +1,15 @@
+thread is for who cannot program state machine
+
+some times, we have to use thread. because we have to use some library that does not allow
+us to do state machine and we must return back to main loop. 
+For instance, if we want to use GnuTLS and glib togather.
+
+Then , libuthread is for you. 
+libuthread is a user-space thread library, thus, you must mange thread your self. but, libuthread
+managers the schedule for you if you just don't want to know whitch thread should be pick up next time.
+
+call uthread_create() to create a thread
+call uthread_yield() to do thread schedule
+call uthread_switchto() to do thread schedule by your self.
+
+
