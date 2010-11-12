@@ -4,8 +4,12 @@
  *  Created on: 2010-11-12
  *      Author: cai
  */
-
+#ifdef _WIN32
+#include "ucontext.h"
+#else
 #include <ucontext.h>
+#endif
+
 #include <uthread.h>
 #include <malloc.h>
 
