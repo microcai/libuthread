@@ -12,4 +12,9 @@ call uthread_create() to create a thread
 call uthread_yield() to do thread schedule
 call uthread_switchto() to do thread schedule by your self.
 
+==============================================================
+now, the topic , how is the plan ?
 
+Well, I plan imporve schedule algorithm. Currently , it's just FIFO.
+And, maybe add sleep/wakup support. Say, let sleep on a condition of a FD state.
+Thus you can make block I/O as-is.
