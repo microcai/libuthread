@@ -101,7 +101,12 @@ void uthread_yield()
 	//to find the next runing thread, and do swapcontext
 	next = uthread_sched_find_next();
 	if(next) //有下一个线程才切换，否则直接返回
-		uthread_switchto(next);
+	{
+		if(next == uthread_self())
+			uthread_yield();
+		else
+			uthread_switchto(next);
+	}
 }
 
 /**
