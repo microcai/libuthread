@@ -1,0 +1,6 @@
+
+#ACLOCAL_AMFLAGS = -I m4
+
+SUBDIRS = src test
+
+DISTCLEANFILES = @PACKAGE_NAME@.spec
