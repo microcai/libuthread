@@ -8,7 +8,6 @@
 #include <ucontext.h>
 #include <uthread.h>
 #include <malloc.h>
-#include <errno.h>
 
 typedef struct thread_context{
     ucontext_t	self;
@@ -81,13 +80,11 @@ void uthread_switchto(uthread_t uthid)
 	current = uthid;
 	swapcontext(&((pthread_context)cur)->self,&((pthread_context)uthid)->self);
 
-	printf("errno=%d\n",errno);
 	current = cur;
 
 	if(clean_up)
 	{
 		//从列表中移走
-		fprintf(stdout,"thread %p exit\n",clean_up);
 		threadlist_remove(clean_up);
 		free(clean_up);
 		clean_up = NULL;
