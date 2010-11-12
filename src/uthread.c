@@ -32,7 +32,7 @@ static uthread_t 	current = (uthread_t) & first_one;
 
 struct threadlist threadlist =
 
-#ifdef _MSVC
+#ifdef _MSC_VER
 	{  & first_one  , & first_one, 1 };
 #else
   { .head = & first_one  , .tail = & first_one, .count = 1 };
