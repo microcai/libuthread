@@ -10,7 +10,6 @@
 void uthread_func(void * param)
 {
 	printf("thread %p is running\n",(void*)uthread_self());
-	uthread_yield();
 }
 
 int main()

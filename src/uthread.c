@@ -8,37 +8,38 @@
 #include <ucontext.h>
 #include <uthread.h>
 #include <malloc.h>
+#include <errno.h>
 
 typedef struct thread_context{
-	ucontext_t	self;
-	unsigned long stack[0]; //to make it align
+    ucontext_t	self;
+    struct thread_context* next;
+    unsigned long stack[0]; //to make it align
 }thread_context,*pthread_context;
 
-struct thread_list{
-	struct thread_list * next;
-	pthread_context		thread;
-};
 
+struct threadlist{
+	pthread_context head;
+	pthread_context tail;
+	int count;
+};
 
 static thread_context	first_one;
 
-struct thread_list	head = {.next = NULL, .thread = & first_one};
+static uthread_t 	current = (uthread_t) & first_one;
 
-// yes , point to current thread
-static uthread_t 	current = (uthread_t) & first_one ;
+struct threadlist threadlist = { .head = & first_one  , .tail = & first_one, .count = 1 };
 
 // yes, if some thread exit , put it here ,
 // the next thread will clean it for you
 static pthread_context	clean_up;
 
-static pthread_context	threads[100]; // max 100 thread allowed currently
 
 static uthread_t uthread_sched_find_next();
 static void uthread_startup(pthread_context tc,__uthread_func fn, void * param);
-static void thread_list_append(pthread_context tc);
-static pthread_context thread_list_removehead();
-static void thread_list_remove(pthread_context ct);
 
+static void threadlist_append(pthread_context tc);
+static pthread_context	threadlist_get_head_and_move_to_tail();
+static void threadlist_remove(pthread_context tc);
 /**
  * Get self? ... maybe a little bit hard, but ... not hard any way
  */
@@ -59,8 +60,7 @@ uthread_t uthread_create(__uthread_func fn, size_t stack_size,void * param)
 	makecontext(&tc->self,(void (*) (void))uthread_startup,3,tc,fn,param);
 
 	//append to tail
-	thread_list_append(tc);
-
+	threadlist_append(tc);
 	return (uthread_t)tc;
 }
 
@@ -72,17 +72,23 @@ void uthread_switchto(uthread_t uthid)
 	uthread_t cur;
 	cur = uthread_self();
 
+	if(uthid == cur)
+		return;
+
 	//起码你可以 return back了，呵呵
 	((pthread_context)uthid)->self.uc_link = & ((pthread_context)cur)->self;
 
 	current = uthid;
 	swapcontext(&((pthread_context)cur)->self,&((pthread_context)uthid)->self);
+
+	printf("errno=%d\n",errno);
 	current = cur;
 
 	if(clean_up)
 	{
 		//从列表中移走
-		thread_list_remove(clean_up);
+		fprintf(stdout,"thread %p exit\n",clean_up);
+		threadlist_remove(clean_up);
 		free(clean_up);
 		clean_up = NULL;
 	}
@@ -108,12 +114,9 @@ static uthread_t uthread_sched_find_next()
 {
 	pthread_context next;
 
-	next = thread_list_removehead();
-	if(next)
-	{
-		thread_list_append((pthread_context)current);
-	}
-		return (uthread_t)next;
+	next = threadlist_get_head_and_move_to_tail();
+
+	return (uthread_t)next;
 }
 
 /**
@@ -125,62 +128,48 @@ static void uthread_startup(pthread_context tc,__uthread_func fn, void * param)
 	fn(param);
 
 	clean_up = tc;
+
+	setcontext(tc->self.uc_link);
 }
 
-static void thread_list_append(pthread_context tc)
+static void threadlist_append(pthread_context tc)
 {
-	struct thread_list * p = &head;
-	while(p->next)
-	{
-		p = p->next;
-	}
-
-	p->next = malloc(sizeof(struct thread_list));
-	p = p->next;
-	p->next = NULL;
-	p->thread = tc;
+	threadlist.count ++;
+	tc->next = threadlist.head;
+	threadlist.tail->next = tc;
+	threadlist.tail = tc;
 }
 
-static pthread_context thread_list_removehead()
+static pthread_context	threadlist_get_head_and_move_to_tail()
 {
-	struct thread_list*	p;
-	pthread_context head_tc;
+	pthread_context org_head;
 
-	if(head.next)
-	{
-		head_tc = head.thread;
-
-		head.thread = head.next->thread;
-
-		p = head.next;
-
-		head.next = p->next;
-
-		free(p);
-		return head_tc;
-	}else
-	{
+	org_head = threadlist.head;
+	if(threadlist.count ==1)
 		return NULL;
-	}
+
+	threadlist.head = threadlist.head->next;
+	threadlist.tail = threadlist.tail->next;
+	return org_head;
 }
 
-static void thread_list_remove(pthread_context ct)
+static void threadlist_remove(pthread_context tc)
 {
-	struct thread_list * pp,* p = &head;
-	if(ct==head.thread)
+	pthread_context r = threadlist.head;
+
+	for(;;)
 	{
-		thread_list_removehead();
-		return ;
-	}
-	while(p->next)
-	{
-		if(p->next->thread == ct)
+		if(r->next == tc)
 		{
-			pp = p->next;
-			p->next = p->next->next;
-			free(pp);
+			r->next = tc->next;
 			return ;
 		}
-		p = p->next;
+		r = r->next;
 	}
+
+	fprintf(stderr,"function should not reach here\n");
+
+	void exit(int);
+
+	exit((int)-1);
 }
