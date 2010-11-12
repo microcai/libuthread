@@ -5,7 +5,7 @@
  *      Author: cai
  */
 #ifdef _WIN32
-#include "ucontext.h"
+#include "Ucontext.h"
 #else
 #include <ucontext.h>
 #endif
@@ -30,8 +30,13 @@ static thread_context	first_one;
 
 static uthread_t 	current = (uthread_t) & first_one;
 
-struct threadlist threadlist = { .head = & first_one  , .tail = & first_one, .count = 1 };
+struct threadlist threadlist =
 
+#ifdef _MSVC
+	{  & first_one  , & first_one, 1 };
+#else
+  { .head = & first_one  , .tail = & first_one, .count = 1 };
+#endif
 // yes, if some thread exit , put it here ,
 // the next thread will clean it for you
 static pthread_context	clean_up;
