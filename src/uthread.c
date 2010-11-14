@@ -112,7 +112,7 @@ void uthread_yield()
 	if(next) //有下一个线程才切换，否则直接返回
 	{
 		if(next == uthread_self())
-			uthread_yield();
+			uthread_switchto(uthread_sched_find_next());
 		else
 			uthread_switchto(next);
 	}
@@ -135,12 +135,17 @@ static uthread_t uthread_sched_find_next()
  */
 static void uthread_startup(pthread_context tc,__uthread_func fn, void * param)
 {
+	if(clean_up)
+	{
+		threadlist_remove(clean_up);
+		free(clean_up);
+	}
 	//call user function
 	fn(param);
 
 	clean_up = tc;
+	uthread_yield();
 
-	setcontext(tc->self.uc_link);
 }
 
 static void threadlist_append(pthread_context tc)
