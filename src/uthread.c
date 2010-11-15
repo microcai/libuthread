@@ -139,6 +139,7 @@ static void uthread_startup(pthread_context tc,__uthread_func fn, void * param)
 	{
 		threadlist_remove(clean_up);
 		free(clean_up);
+		clean_up = NULL;
 	}
 	//call user function
 	fn(param);
